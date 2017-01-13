@@ -156,6 +156,30 @@ QXcbScreen *QXcbWindow::parentScreen()
     return parent() ? static_cast<QXcbWindow*>(parent())->parentScreen() : xcbScreen();
 }
 
+//QPlatformWindow::screenForGeometry version that uses deviceIndependentGeometry
+QXcbScreen *QXcbWindow::initialScreen() const
+{
+    QPlatformScreen *currentScreen = screen();
+    QPlatformScreen *fallback = currentScreen;
+
+    QRect currentGeometry = window()->geometry();
+    QPoint center = currentGeometry.isEmpty() ? currentGeometry.topLeft() : currentGeometry.center();
+    if (window()->type() == Qt::ForeignWindow)
+        center = mapToGlobal(center - currentGeometry.topLeft());
+
+    if (!parent() && currentScreen && !currentScreen->deviceIndependentGeometry().contains(center)) {
+        const auto screens = currentScreen->virtualSiblings();
+        for (QPlatformScreen *screen : screens) {
+            const QRect screenGeometry = screen->deviceIndependentGeometry();
+            if (screenGeometry.contains(center))
+                return static_cast<QXcbScreen *>(screen);
+            if (screenGeometry.intersects(currentGeometry))
+                fallback = screen;
+        }
+    }
+    return static_cast<QXcbScreen *>(fallback);
+}
+
 // Returns \c true if we should set WM_TRANSIENT_FOR on \a w
 static inline bool isTransient(const QWindow *w)
 {
@@ -368,8 +392,8 @@ void QXcbWindow::create()
     Qt::WindowType type = window()->type();
 
     QXcbScreen *currentScreen = xcbScreen();
-    QRect rect = windowGeometry();
-    QXcbScreen *platformScreen = parent() ? parentScreen() : static_cast<QXcbScreen*>(screenForGeometry(rect));
+    QXcbScreen *platformScreen = parent() ? parentScreen() : initialScreen();
+    QRect rect = QHighDpi::toNativePixels(window()->geometry(), platformScreen);
 
     if (type == Qt::Desktop) {
         m_window = platformScreen->root();
