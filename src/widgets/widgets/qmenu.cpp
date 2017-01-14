@@ -3516,7 +3516,7 @@ void QMenu::internalDelayedPopup()
 
     int subMenuOffset = style()->pixelMetric(QStyle::PM_SubMenuOverlap, 0, this);
     const QRect actionRect(d->actionRect(d->currentAction));
-    const QPoint rightPos(mapToGlobal(QPoint(actionRect.right() + subMenuOffset + 1, actionRect.top())));
+    const QPoint rightPos(mapToGlobal(QPoint(actionRect.right() + subMenuOffset, actionRect.top())));
 
     d->activeMenu->popup(rightPos);
     d->sloppyState.setSubMenuPopup(actionRect, d->currentAction, d->activeMenu);
